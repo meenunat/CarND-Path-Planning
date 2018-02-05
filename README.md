@@ -117,8 +117,8 @@ the path has processed since last time.
 A FSM with change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. To decide which state is the car be in, cost of each state calculated based on Feasibility, Collision, Danger, and Efficiency and each creteria is a constant multiplier.
 
 ## Results: 
-The car was able to run successfully around the highway without any incident.
+The car was able to run successfully around the highway without any incident. Due to git size limitation: short clipping of the drive is uploaded in the repository (out-4.ogv)
 
 ![](Image_0.jpg)
 
-Short Clipping is available - out-4.ogv
+
