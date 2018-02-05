@@ -84,7 +84,7 @@ double keep_lane_cost(){
 }
 
 double lane_speed(vector<vector<double>> SensorVector, int lane, double car_s){
-		double speed=100;
+		double speed=75;
 		for (int i=0; i < SensorVector.size(); ++i)
 		{
 		  float d = SensorVector[i][6];
@@ -441,7 +441,9 @@ int main() {
        			break;
 			}
         	};
-			
+
+		//Speed Control	
+
 		if (start){
 			
 			  if (curr_speed > 46.5){
@@ -458,16 +460,17 @@ int main() {
 					slowdown = false;
 				}
 				else if (curr_speed > 35){
-					curr_speed-=2.0;
+					curr_speed-=3.0;
 				}
 			}
 			else{
-				if (curr_speed <= 46.5){
+				if (curr_speed <= 48.5){
 					curr_speed += 1;
 				}
 			}
 		}
 
+ 		//Define path via XY points for prediction 
   		vector<double> ptsx;
 		vector<double> ptsy;
 
@@ -498,14 +501,14 @@ int main() {
 			ptsy.push_back(ref_y);
 
 		}
-   // Converting Frenet cordinates to Polar coordinates for polynomial fitting
-			const int s_step = 3;
-			const double s_dist = 45;
-			for (int i=0; i < s_step; i++){
-				vector<double> wp = getXY(car_s+s_dist*(i+1), (2 + 4 * (lane)), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-				ptsx.push_back(wp[0]);
-				ptsy.push_back(wp[1]);
-			}
+		// Converting Frenet cordinates to Polar coordinates for polynomial fitting
+		const int s_step = 3;
+		const double s_dist = 45;
+		for (int i=0; i < s_step; i++){
+			vector<double> wp = getXY(car_s+s_dist*(i+1), (2 + 4 * (lane)), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+			ptsx.push_back(wp[0]);
+			ptsy.push_back(wp[1]);
+		}
 
 		for (int i=0; i<ptsx.size(); i++)
 		{
@@ -517,13 +520,12 @@ int main() {
 
 		}
 
+		//Create Spline
 		tk::spline s;
 
 		s.set_points(ptsx, ptsy);
 
-          	json msgJson;
-
-          	vector<double> next_x_vals;
+           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
           	int point_transfer = min(prev_size, 50);
 		for (int i = 0; i < point_transfer; i++){
@@ -547,8 +549,8 @@ int main() {
 			next_x_vals.push_back(x_point);
 			next_y_vals.push_back(y_point);
 		}
-
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+         	json msgJson;
+	       	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;
 
