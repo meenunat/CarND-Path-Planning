@@ -121,4 +121,4 @@ The car was able to run successfully around the highway without any incident.
 
 ![](Image_0.jpg)
 
-![](out-4.ogv)
+Short Clipping is available - out-4.ogv
