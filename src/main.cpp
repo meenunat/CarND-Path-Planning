@@ -21,7 +21,7 @@ double efficiency = pow(10,2);
 
 double collision_cost(vector<vector<double>> SensorVector, int lane, int prev_size, double car_s){
 	double cost=0;
-	for (int i=0; i < SensorVector.size(); i++)
+	for (int i=0; i < SensorVector.size(); ++i)
 	{
 		  float d = SensorVector[i][6];
 		  if (d<(2+4*lane+2) && d >(2+4*lane-2))
@@ -32,7 +32,7 @@ double collision_cost(vector<vector<double>> SensorVector, int lane, int prev_si
 				double check_car_s = SensorVector[i][5];
 				check_car_s += ((double)prev_size * SampleTime *check_speed);
 
-				if ((check_car_s > car_s) &&((check_car_s-car_s)<30))
+				if ((check_car_s > car_s) &&((check_car_s-car_s)<35))
 				{
 					cost+=10*collision;
 				}
@@ -43,20 +43,17 @@ double collision_cost(vector<vector<double>> SensorVector, int lane, int prev_si
 
 double guard_cost(vector<vector<double>> SensorVector, int lane, int prev_size, double car_s){
 	double cost=0;
-		for (int i=0; i < SensorVector.size(); i++)
-		{
+	for (int i=0; i < SensorVector.size(); ++i)
+	{
 		  float d = SensorVector[i][6];
-		  if (d<(2+4*lane+2) && d >(2+4*lane-2))
-			{
-				double vx = SensorVector[i][3];
-				double vy = SensorVector[i][4];
-				double check_speed = sqrt(vx*vx+vy*vy);
-				double check_car_s = SensorVector[i][5];
-				check_car_s += ((double)prev_size * SampleTime *check_speed);
-
-				if ((check_car_s > car_s) &&((check_car_s-car_s)<50))
-				{
-					cost+=10*danger;
+		  if (d<(2+4*lane+2) && d >(2+4*lane-2)){
+			double vx = SensorVector[i][3];
+			double vy = SensorVector[i][4];
+			double check_speed = sqrt(vx*vx+vy*vy);
+			double check_car_s = SensorVector[i][5];
+			check_car_s += ((double)prev_size * SampleTime *check_speed);
+			if ((check_car_s > car_s) &&((check_car_s-car_s)<55)){
+				cost+=10*danger;
 			}
 		}
 	}
@@ -88,7 +85,7 @@ double keep_lane_cost(){
 
 double lane_speed(vector<vector<double>> SensorVector, int lane, double car_s){
 		double speed=100;
-		for (int i=0; i < SensorVector.size(); i++)
+		for (int i=0; i < SensorVector.size(); ++i)
 		{
 		  float d = SensorVector[i][6];
 		  if (d<(2+4*lane+2) && d >(2+4*lane-2))
@@ -103,6 +100,8 @@ double lane_speed(vector<vector<double>> SensorVector, int lane, double car_s){
 				}
 			}
 		}
+	cout << "Lane speed " << speed << endl;
+
 	return speed;
 }
 
@@ -113,6 +112,7 @@ double calculate(vector<vector<double>> SensorVector, int lane, int prev_size, d
 	cost_Map[1] = 0;
 	cost_Map[2] = 0;
 	map<int,double>::iterator it;
+	cout << "Calculate " << endl;
 	for(it = cost_Map.begin(); it != cost_Map.end(); it++)
 	{
 	    	//Left lane
@@ -122,8 +122,8 @@ double calculate(vector<vector<double>> SensorVector, int lane, int prev_size, d
 	    		if (cost_Map[0] == 0)
 			{
 	    			cost_Map[0] += collision_cost(SensorVector, lane-1, prev_size, car_s);
-    			cost_Map[0] += left_lane_change_cost();
-    			cost_Map[0] += guard_cost(SensorVector, lane-1, prev_size, car_s);
+	    			cost_Map[0] += left_lane_change_cost();
+    				cost_Map[0] += guard_cost(SensorVector, lane-1, prev_size, car_s);
     			}
 	    	}
 	    	//Right Lane
@@ -188,6 +188,7 @@ string hasData(string s) {
 
 double distance(double x1, double y1, double x2, double y2)
 {
+//	cout << "distance " << endl;
 	return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 }
 int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vector<double> &maps_y)
@@ -399,11 +400,10 @@ int main() {
 
           	// Sensor Fusion Data, a list of all other cars on the same side of the road.
           	auto sensor_fusion = j[1]["sensor_fusion"];
-//###########################################################
           	int prev_size = previous_path_x.size();
 
           	vector<vector<double>> SensorVector;
-          	for (int i=0;i<sensor_fusion.size();i++){
+          	for (int i=0;i<sensor_fusion.size();++i){
           		vector<double> TempVec;
           		for (int j=0;j<sensor_fusion[i].size();++j){
               		TempVec.push_back(sensor_fusion[i][j]);
@@ -412,56 +412,61 @@ int main() {
 
           	}
 
-//cost function FSM
+		//cost function FSM
 
-        	vector<vector<double>> lane_cost_vector;
-        	int choice = calculate(SensorVector, lane, prev_size,car_s);
+              	int choice = calculate(SensorVector, lane, prev_size,car_s);
         	switch (choice){
        		case 0:
-       			cout << "Changing Left Lane" << endl;
+       			{
+			cout << "Changing Left Lane" << endl;
        			lane += -1;
        			break;
+			}
        		case 1:
-       			cout << "Changing Right Lane" << endl;
+			{       			
+			cout << "Changing Right Lane" << endl;
        			lane += +1;
        			break;
+			}
        		case 2:
+			{
        			cout << "Remain in same Lane" << endl;
        			lane += 0;
        			break;
+			}
        		case 3:
+			{
        			cout << "Accelerating..Slow down" << endl;
        			slowdown = true;
        			break;
+			}
         	};
-
-			curr_speed = car_speed;
-			if (start){
-				if (curr_speed > 46.5){
-					 start = false;
+			
+		if (start){
+			
+			  if (curr_speed > 46.5){
+				 start = false;
+			  }
+			  else{
+				curr_speed+=3.0;
+			  }
+		}
+		else{
+			if(slowdown){
+				double speed =2.24*lane_speed(SensorVector, lane, car_s);
+				if (curr_speed <= speed ){
+					slowdown = false;
 				}
-				else{
-					curr_speed+=3.0;
+				else if (curr_speed > 35){
+					curr_speed-=2.0;
 				}
 			}
 			else{
-				if(slowdown){
-					double speed = 2.24*lane_speed(SensorVector, lane, car_s);
-					if (curr_speed <= speed ){
-						slowdown = false;
-					}
-					else if (curr_speed > 35){
-						curr_speed-=2.4;
-						cout << "Slowing down"<< endl;
-					}
-				}
-				else{
-					if (curr_speed <= 46.5){
-						curr_speed += 1;
-					}
+				if (curr_speed <= 46.5){
+					curr_speed += 1;
 				}
 			}
-
+		}
 
   		vector<double> ptsx;
 		vector<double> ptsy;
@@ -495,7 +500,7 @@ int main() {
 		}
    // Converting Frenet cordinates to Polar coordinates for polynomial fitting
 			const int s_step = 3;
-			const double s_dist = 50;
+			const double s_dist = 45;
 			for (int i=0; i < s_step; i++){
 				vector<double> wp = getXY(car_s+s_dist*(i+1), (2 + 4 * (lane)), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 				ptsx.push_back(wp[0]);
@@ -521,27 +526,27 @@ int main() {
           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
           	int point_transfer = min(prev_size, 50);
-			for (int i = 0; i < point_transfer; i++){
-				next_x_vals.push_back(previous_path_x[i]);
-				next_y_vals.push_back(previous_path_y[i]);
-			}
-			double target_y = s(s_dist);
-			double dist = sqrt(target_y*target_y+s_dist*s_dist);
-			double x_add_on = 0;
-			double N = dist / (0.02 * (curr_speed/2.24));
-			double cos_y = cos(ref_yaw);
-			double sin_y = sin(ref_yaw);
-			for (int i = 0; i < 50-point_transfer; i++){
-				double x_point = x_add_on+s_dist/N;
-				double y_point = s(x_point);
-				x_add_on = x_point;
-				double x_ref = x_point;
-				double y_ref = y_point;
-				x_point = x_ref * cos_y - y_ref * sin_y + ref_x;
-				y_point = x_ref * sin_y + y_ref * cos_y + ref_y;
-				next_x_vals.push_back(x_point);
-				next_y_vals.push_back(y_point);
-			}
+		for (int i = 0; i < point_transfer; i++){
+			next_x_vals.push_back(previous_path_x[i]);
+			next_y_vals.push_back(previous_path_y[i]);
+		}
+		double target_y = s(s_dist);
+		double dist = sqrt(target_y*target_y+s_dist*s_dist);
+		double x_add_on = 0;
+		double cos_y = cos(ref_yaw);
+		double sin_y = sin(ref_yaw);
+		double N = dist / (0.02 * (curr_speed/2.24));
+		for (int i = 0; i < 50-point_transfer; i++){
+			double x_point = x_add_on+s_dist/N;
+			double y_point = s(x_point);
+			x_add_on = x_point;
+			double x_ref = x_point;
+			double y_ref = y_point;
+			x_point = x_ref * cos_y - y_ref * sin_y + ref_x;
+			y_point = x_ref * sin_y + y_ref * cos_y + ref_y;
+			next_x_vals.push_back(x_point);
+			next_y_vals.push_back(y_point);
+		}
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;
