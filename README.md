@@ -39,40 +39,10 @@ Buiding instructions as follow:
     git clone https://github.com/uWebSockets/uWebSockets 
     cd uWebSockets
     git checkout e94b6e1
-    ```
-	
-## Directory Structure 
-The directory structure of this repository is as follows:
+   ```
+* main.cpp handles websocket events, and contains all of the relevant code.
 
-```
-root
-|   CMakeLists.txt
-|   cmakepatch.txt
-|   README.md
-|   data
-|   install-ubuntu.sh
-|   install-mac.sh
-|   src
-|
-|___videos
-|   |
-|   |  rightTurn.gif
-|   |  leftTurn.gif
-|   |  slowDown.gif
-|
-|
-|___src
-|   |   main.cpp
-|   |   spline.h
-|   |   json.hpp
-|   |   Eigen-3.3
-|
-|
-|___data
-    |   
-    |  highway_map.csv
-
-```
+* spline.h is a convenient open source spline library used for finding trajectories.
 
 ## Main car's localization Data (No Noise)
 
@@ -108,13 +78,28 @@ the path has processed since last time.
 
 ## Flow Details 
 
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
+1. The car uses a perfect controller and will visit every (x,y) point it receives in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner receives should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
 
 2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
       
-## Path Planning Decisions 
+## Path Planning Implementation
 
-A FSM with change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. To decide which state is the car be in, cost of each state calculated based on Feasibility, Collision, Danger, and Efficiency and each creteria is a constant multiplier.
+The simulator returns instantaneous telemetry data for the ego vehicle, but it also returns the list of points from previously generated path. The sensor fusion data received from the simulator in each iteration is parsed and trajectories for each of the other cars on the road are generated. 
+
+The telemetry is used to project the car's state into the future and a "planning state" is determined based on the difference between points at some prescribed number of points along the previous path. In effect, this can help to generate smoother transitions, handle latency from transmission between the controller and the simulator, and alleviate the trajectory generator of some computation overhead.
+
+These trajectories match the duration and interval of the ego car's trajectories generated for each available state. They  are used in conjunction with a set of cost functions (based on Feasibility, Collision, Danger, and Efficiency) to determine a best trajectory for the ego car. This is achieved by using a FSM to change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. 
+
+Collision cost: penalizes a trajectory that collides with any predicted traffic trajectories.
+
+Guard cost: penalizes a trajectory that comes within a certain distance of another traffic vehicle trajectory.
+
+Efficiency cost: penalizes trajectories with lower target velocity.
+
+Feasibility cost: penalizes driving in any lane not feasible by the ego car.
 
 ## Results: 
 The car was able to run successfully around the highway without any incident. Due to git size limitation: short clipping of the drive is uploaded in the repository (out-4.ogv)
+
+## Discussions
+Sometimes the car might experience maximum acceleration depending on the spline. Hence I had to fine tune the points to be less aggressive to maintain within maximum acceleration. Sometime car can get stuck behind a slow car if the next lane car relatively same speed and following little behind. In such a case, the car could slow down and move to the very last right lane.  
