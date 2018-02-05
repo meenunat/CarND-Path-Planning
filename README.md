@@ -118,7 +118,3 @@ A FSM with change Right Lane, change Left Lane, remain in same Lane and slow dow
 
 ## Results: 
 The car was able to run successfully around the highway without any incident. Due to git size limitation: short clipping of the drive is uploaded in the repository (out-4.ogv)
-
-![](Image_0.jpg)
-
-
