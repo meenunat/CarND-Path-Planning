@@ -86,17 +86,97 @@ the path has processed since last time.
 
 The simulator returns instantaneous telemetry data for the ego vehicle, but it also returns the list of points from previously generated path. The sensor fusion data received from the simulator in each iteration is parsed and trajectories for each of the other cars on the road are generated. 
 
-The telemetry is used to project the car's state into the future and a "planning state" is determined based on the difference between points at some prescribed number of points along the previous path. In effect, this can help to generate smoother transitions, handle latency from transmission between the controller and the simulator, and alleviate the trajectory generator of some computation overhead.
+The trajectories match the duration and interval of the ego car's trajectories generated for each available state. They  are used in conjunction with a set of cost functions (based on Feasibility, Collision, Danger, and Efficiency - i.e by using constant multiplier as cost) to determine a best trajectory for the ego car. This is achieved by using a FSM to change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. Each state has assocaited cost and the decision is made comparing the cost.
 
-These trajectories match the duration and interval of the ego car's trajectories generated for each available state. They  are used in conjunction with a set of cost functions (based on Feasibility, Collision, Danger, and Efficiency) to determine a best trajectory for the ego car. This is achieved by using a FSM to change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. 
+     for(it = cost_Map.begin(); it != cost_Map.end(); it++)
+      {
+           //Left lane
+           if (it->first == 0)
+       {
+            cost_Map[0] += feasibility_cost(lane-1);
+            if (cost_Map[0] == 0)
+        {
+             cost_Map[0] += collision_cost(SensorVector, lane-1, prev_size, car_s);
+             cost_Map[0] += left_lane_change_cost();
+             cost_Map[0] += guard_cost(SensorVector, lane-1, prev_size, car_s);
+            }
+           }
+           //Right Lane
+           else if (it->first == 1){
+            cost_Map[1] += feasibility_cost(lane+1);
+            if (cost_Map[1] == 0)
+        {
+             cost_Map[1] += collision_cost(SensorVector, lane+1, prev_size, car_s);
+             cost_Map[1] += right_lane_change_cost();
+             cost_Map[1] += guard_cost(SensorVector, lane+1, prev_size, car_s);
+            }
+           }
+           //Keep Lane
+           if (it->first == 2)
+       {
+            cost_Map[2] += feasibility_cost(lane);
+            if (cost_Map[2] == 0)
+        {
+             cost_Map[2] += collision_cost(SensorVector, lane, prev_size, car_s);
+             cost_Map[2] += keep_lane_cost();
+             cost_Map[2] += guard_cost(SensorVector, lane, prev_size, car_s);
+            }
+           }
 
-Collision cost: penalizes a trajectory that collides with any predicted traffic trajectories.
+          }
 
-Guard cost: penalizes a trajectory that comes within a certain distance of another traffic vehicle trajectory.
 
-Efficiency cost: penalizes trajectories with lower target velocity.
+###Collision cost: penalizes a trajectory that collides with any predicted traffic trajectories with distance less than 35.
+   double collision = pow(10,4); 
+ 
+   double collision_cost(vector<vector<double>> SensorVector, int lane, int prev_size, double car_s){
+    double cost=0;
+    for (int i=0; i < SensorVector.size(); ++i)
+    {
+       float d = SensorVector[i][6];
+       if (d<(2+4*lane+2) && d >(2+4*lane-2))
+              {
+       double vx = SensorVector[i][3];
+       double vy = SensorVector[i][4];
+       double check_speed = sqrt(vx*vx+vy*vy);
+       double check_car_s = SensorVector[i][5];
+       check_car_s += ((double)prev_size * SampleTime *check_speed);
 
-Feasibility cost: penalizes driving in any lane not feasible by the ego car.
+       if ((check_car_s > car_s) &&((check_car_s-car_s)<35))
+       {
+        cost+=10*collision;
+       }
+       }
+     }
+    return cost;
+   }
+
+###Guard cost: penalizes a trajectory that comes within a certain distance of another traffic vehicle trajectory with distance less than 55.
+   double guard_cost(vector<vector<double>> SensorVector, int lane, int prev_size, double car_s){
+    double cost=0;
+    for (int i=0; i < SensorVector.size(); ++i)
+    {
+       float d = SensorVector[i][6];
+       if (d<(2+4*lane+2) && d >(2+4*lane-2)){
+      double vx = SensorVector[i][3];
+      double vy = SensorVector[i][4];
+      double check_speed = sqrt(vx*vx+vy*vy);
+      double check_car_s = SensorVector[i][5];
+      check_car_s += ((double)prev_size * SampleTime *check_speed);
+      if ((check_car_s > car_s) &&((check_car_s-car_s)<55)){
+       cost+=10*danger;
+      }
+     }
+    }
+    return cost;
+   }
+
+
+###Efficiency cost: penalizes trajectories with lower target velocity.
+   double efficiency = pow(10,2); 
+
+###Feasibility cost: penalizes driving in any lane not feasible by the ego car.
+   double feasibility = pow(10,5); 
 
 ## Results: 
 The car was able to run successfully around the highway without any incident. Due to git size limitation: short clipping of the drive is uploaded in the repository (out-4.ogv)
