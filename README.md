@@ -86,7 +86,7 @@ the path has processed since last time.
 
 The simulator returns instantaneous telemetry data for the ego vehicle, but it also returns the list of points from previously generated path. The sensor fusion data received from the simulator in each iteration is parsed and trajectories for each of the other cars on the road are generated. 
 
-The trajectories match the duration and interval of the ego car's trajectories generated for each available state. They  are used in conjunction with a set of cost functions (based on Feasibility, Collision, Danger, and Efficiency - i.e by using constant multiplier as cost) to determine a best trajectory for the ego car. This is achieved by using a FSM to change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created. Each state has assocaited cost and the decision is made comparing the cost.
+A FSM to change Right Lane, change Left Lane, remain in same Lane and slow down if accelerating was created.They  are used in conjunction with a set of cost functions (based on Feasibility, Collision, Danger, and Efficiency - i.e by using constant multiplier as cost) to determine a best trajectory for the ego car. Each state has assocaited cost and the decision is made comparing the cost. The trajectories match the duration and interval of the ego car's trajectories generated for each available state. 
 
      for(it = cost_Map.begin(); it != cost_Map.end(); it++)
       {
